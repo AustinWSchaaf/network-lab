@@ -5,7 +5,7 @@ pub fn run() -> io::Result<()> {
     let socket = UdpSocket::bind("0.0.0.0:2053")?;
     println!("DNS Echo Server Listening on 0.0.0.0:2053");
 
-    let mut buffer = [0u8, 512];
+    let mut buffer = [0u8; 512];
 
     loop {
         let (size, src) = socket.recv_from(&mut buffer)?;

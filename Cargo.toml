@@ -1,4 +1,6 @@
 [workspace]
 members = [
-	"dns-server"
-, "firewall", "packet-sniffer"]
+	"dns-server", 
+	"firewall", 
+	"packet-sniffer"
+]
