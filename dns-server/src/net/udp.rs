@@ -1,6 +1,8 @@
 use std::net::UdpSocket;
 use std::io;
 
+use crate::dns::header::DnsHeader;
+
 pub fn run() -> io::Result<()> {
     let socket = UdpSocket::bind("0.0.0.0:2053")?;
     println!("DNS Echo Server Listening on 0.0.0.0:2053");
@@ -15,5 +17,11 @@ pub fn run() -> io::Result<()> {
 
         socket.send_to(&buffer[..size], src)?;
         println!("Echoed packet back {}\n", src);
+
+        let header = DnsHeader::parse(&buffer);
+        
+        println!("ID: {}", header.id);
+        println!("Questions: {}", header.qdcount);
+        println!("Answers: {}", header.ancount);
     }
 }
