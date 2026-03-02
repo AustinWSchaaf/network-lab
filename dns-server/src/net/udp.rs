@@ -2,6 +2,8 @@ use std::net::UdpSocket;
 use std::io;
 use crate::dns::header::DnsHeader;
 use crate::dns::question::DnsQuestion;
+use crate::filter::blocklist::Blocklist;
+
 
 const BLOCKED_DOMAINS: &[&str] = &[
     "badsite.com",
@@ -9,6 +11,9 @@ const BLOCKED_DOMAINS: &[&str] = &[
 ];
 
 pub fn run() -> io::Result<()> {
+    let blocklist = Blocklist::load("blocklist.txt")?;
+    println!("Blocklist loaded.");
+
     let socket = UdpSocket::bind("0.0.0.0:2053")?;
     println!("DNS Echo Server Listening on 0.0.0.0:2053");
 
@@ -30,11 +35,11 @@ pub fn run() -> io::Result<()> {
             let (question, _) = DnsQuestion::parse(&buffer, pos);
             println!("Domain: {}", question.name);
 
-            if BLOCKED_DOMAINS.contains(&question.name.as_str()) {
-                println!("Domain: {}", question.name);
+            if blocklist.is_blocked(&question.name) {
+                println!("Blocked: {}", question.name);
 
                 let response = build_nxdomain_repsonse(&buffer[..size]);
-                socket.send_to(&response, src);
+                socket.send_to(&response, src)?;
                 continue;
             }
         }

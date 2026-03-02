@@ -1,0 +1,5 @@
+badsite.com
+ads.google.com
+*.tracking.com
+*.doubleclick.net
+*.google.com
