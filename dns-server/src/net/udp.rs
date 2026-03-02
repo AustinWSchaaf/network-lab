@@ -3,6 +3,11 @@ use std::io;
 use crate::dns::header::DnsHeader;
 use crate::dns::question::DnsQuestion;
 
+const BLOCKED_DOMAINS: &[&str] = &[
+    "badsite.com",
+    "ads.google.com",
+];
+
 pub fn run() -> io::Result<()> {
     let socket = UdpSocket::bind("0.0.0.0:2053")?;
     println!("DNS Echo Server Listening on 0.0.0.0:2053");
@@ -24,6 +29,14 @@ pub fn run() -> io::Result<()> {
         if header.qdcount > 0 {
             let (question, _) = DnsQuestion::parse(&buffer, pos);
             println!("Domain: {}", question.name);
+
+            if BLOCKED_DOMAINS.contains(&question.name.as_str()) {
+                println!("Domain: {}", question.name);
+
+                let response = build_nxdomain_repsonse(&buffer[..size]);
+                socket.send_to(&response, src);
+                continue;
+            }
         }
 
         //Forward request upstream
@@ -43,4 +56,20 @@ fn forward_to_upstream(request: &[u8]) -> io::Result<(Vec<u8>)> {
     let mut response_buffer = [0u8; 512];
     let (size, _) = upstream_socket.recv_from(&mut response_buffer)?;
     Ok(response_buffer[..size].to_vec())
+}
+
+fn build_nxdomain_repsonse(request: &[u8]) -> Vec<u8> {
+    let mut response = request.to_vec();
+    
+    // Set QR bit (response)
+    response[2] &= 0x80;
+
+    // Clear RCODE bits
+    response[3] &= 0xF0;
+
+    // ANCOUNT = 0
+    response[6] = 0;
+    response[7] = 0;
+
+    response
 }
