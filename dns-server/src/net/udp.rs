@@ -5,6 +5,7 @@ use crate::dns::header::DnsHeader;
 use crate::dns::question::DnsQuestion;
 use crate::filter::blocklist::Blocklist;
 use crate::cache::store::DnsCache;
+use crate::dns::answer::extract_min_ttl;
 
 pub fn run() -> io::Result<()> {
     let socket = UdpSocket::bind("0.0.0.0:2053")?;
@@ -53,12 +54,20 @@ pub fn run() -> io::Result<()> {
         // 🌍 Forward upstream
         let response = forward_to_upstream(&buffer[..size])?;
 
-        println!("Cache insert: {}", question.name);
-        cache.insert(
-            question.name.clone(),
-            question.qtype,
-            response.clone(),
-        );
+        if let Some(ttl) = extract_min_ttl(&response) {
+            if ttl > 0 {
+                println!("Cache insert: {} (TTL: {}s)", question.name, ttl);
+                cache.insert_with_ttl(question.name, 
+                    question.qtype, 
+                    response.clone(), 
+                    ttl as u64
+                );
+            } else {
+                println!("TTL = 0, not chaching.")
+            }
+        } else {
+            println!("No TTL found, not chaching.")
+        }
 
         socket.send_to(&response, src)?;
     }
